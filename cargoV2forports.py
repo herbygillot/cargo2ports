@@ -78,7 +78,7 @@ def parse_package_block(text):
     lines = text.split("\n")
     for line in lines:
         if "=" in line:
-            k, v = line.split("=")
+            k, v = line.split("=", maxsplit=1)
         parsed[strip_string(k)] = strip_string(v)
     return parsed
 
