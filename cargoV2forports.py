@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Utility to generate a cargo.crates Portfile stanza for MacPorts given a V2
-version of a Rust project's Cargo.lock file.
+Utility to generate a cargo.crates stanza for a MacPorts Portfile given a
+Rust project's Cargo.lock file.
 """
 
 
@@ -44,29 +44,66 @@ def read_open_file(f):
     return data
 
 
-def get_package_blocks(text):
+def get_packages(text):
     """
     Given a string of text expected to be in the format of a V2 Cargo.lock
-    file, find all package definition blocks and return the list of package
-    definition blocks as a list of strings.
+    file, find all package definition blocks and return the list of packages
+    as a list of dictionaries.
     """
-    blocks = list()
+    packages = list()
 
     block_re = (
+        r"\[\[package\]\]\s*"  # fmt: off
         r"("  # fmt: off
-        r"\[\[package\]\]\s*"
-        r"("
-        r"(.+\n)+"
-        r")"
-        r")"
-        r"(^\s*\n|$)"
+        r"(.+\n)+"  # fmt: off
+        r")"  # fmt: off
+        r"(^\s*\n|$)"  # fmt: off
     )
 
     for match in re.finditer(block_re, text, re.MULTILINE):
         if match:
-            block = match.groups()[1]
-            blocks.append(block)
-    return blocks
+            block = match.groups()[0]
+            package = parse_package_block(block)
+            packages.append(package)
+    return packages
+
+
+def get_packages_from_metadata(text):
+    """
+    Given a string of text expected to be in the format of a V1 Cargo.lock
+    file, return the packages defined in the metadata section as a list of
+    dictionaries.
+    """
+    packages = list()
+
+    metadata_re = (
+        r"^\[metadata\]\s*"  # fmt: off
+        r"("  # fmt: off
+        r"^((\"checksum\s*.*)|\s*\n)+"  # fmt: off
+        r")"  # fmt: off
+    )
+
+    match = re.search(metadata_re, text, re.MULTILINE)
+
+    if not match:
+        return packages
+
+    metadata_lines = match.groups()[0].split("\n")
+
+    for line in metadata_lines:
+        tokens = re.split("\s+", line)
+        if len(tokens) >= 6:
+            package = dict()
+
+            tokens = list(map(strip_string, tokens))
+
+            package["name"] = tokens[1]
+            package["version"] = tokens[2]
+            package["checksum"] = tokens[5]
+
+            packages.append(package)
+
+    return packages
 
 
 def parse_package_block(text):
@@ -84,7 +121,7 @@ def parse_package_block(text):
     return parsed
 
 
-def get_crate_line(block_dict):
+def get_crate_line(package_dict):
     """
     Given a parsed package block as a dictionary, generate and return the
     Portfile crates line for it.
@@ -93,9 +130,9 @@ def get_crate_line(block_dict):
 
     spacer_width = STANZA_SPACER_WIDTH
 
-    name = block_dict["name"]
-    ver = block_dict["version"]
-    cksum = block_dict["checksum"]
+    name = package_dict["name"]
+    ver = package_dict["version"]
+    cksum = package_dict["checksum"]
 
     name_len = len(name)
     ver_len = len(ver)
@@ -111,29 +148,35 @@ def get_crate_line(block_dict):
     )  # fmt: off
 
 
-def generate_crates_stanza(blocks_dict_list):
+def generate_crates_stanza(pkg_dicts):
     """
-    Given a list of package block dictionaries, return the Portfile
-    cargo.crates stanza as a string.
+    Given a list of packages as dictionaries, return the Portfile cargo.crates
+    stanza as a string.
     """
-    num_blocks = len(blocks_dict_list)
+    num_blocks = len(pkg_dicts)
 
     output = list()
 
     output.append("cargo.crates \\")
 
-    for count, b in enumerate(blocks_dict_list):
-        block = parse_package_block(b)
-
-        if "checksum" not in block:
+    for count, pkg in enumerate(pkg_dicts):
+        if "checksum" not in pkg:
             continue
 
-        line = get_crate_line(block)
+        line = get_crate_line(pkg)
 
         ending = "" if (count == (num_blocks - 1)) else " \\"
         output.append("{}{}".format(line, ending))
 
     return "\n".join(output)
+
+
+def is_v1_lockfile(text):
+    """
+    Return True if the given file contents are a V1 Cargo.lock file, False
+    otherwise.
+    """
+    return True if re.search("^\[metadata\]", text, re.MULTILINE) else False
 
 
 def main():
@@ -162,15 +205,19 @@ def main():
     STANZA_INDENT = args.indent
 
     contents = read_open_file(args.lockfile)
-    blocks = get_package_blocks(contents)
 
-    if not blocks:
+    if is_v1_lockfile(contents):
+        packages = get_packages_from_metadata(contents)
+    else:
+        packages = get_packages(contents)
+
+    if not packages:
         fatal(
             "No package definitions found: either not a Cargo.lock "
             + "file, or file is empty."
         )
 
-    output = generate_crates_stanza(blocks)
+    output = generate_crates_stanza(packages)
     print(output)
 
 
