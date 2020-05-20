@@ -181,8 +181,12 @@ def is_v1_lockfile(text):
 
 def main():
     global STANZA_INDENT
+    global STANZA_FIELD_WIDTH
 
-    argparser = argparse.ArgumentParser(description=__doc__)
+    argparser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
 
     argparser.add_argument(
         "lockfile",
@@ -201,8 +205,21 @@ def main():
         type=int,
     )
 
+    argparser.add_argument(
+        "-w",
+        "--width",
+        default=STANZA_FIELD_WIDTH,
+        help=(
+            "How many characters and spaces wide the name/version field "
+            "should be"
+        ),
+        type=int,
+    )
+
     args = argparser.parse_args()
+
     STANZA_INDENT = args.indent
+    STANZA_FIELD_WIDTH = args.width
 
     contents = read_open_file(args.lockfile)
 
