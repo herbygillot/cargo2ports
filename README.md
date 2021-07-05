@@ -45,18 +45,36 @@ cargo.crates \
 ...
 ```
 
+### Installation
+
+You can install `cargo2ports` by running the following command in a virtualenv:
+
+```
+python setup.py install
+```
+
+Follow these steps to install `pipx` from MacPorts and install `cargo2ports` globally
+
+```
+sudo port selfupdate
+sudo port install pipx
+pipx install git+https://github.com/herbygillot/cargo2ports.git
+```
+
+Note: Update your `$PATH` to add the pipx bin directory or update the `PIPX_BIN_DIR` environment variable.
+
 ### Usage
 
-`cargo2ports.py ./Cargo.lock`
+`cargo2ports ./Cargo.lock`
 
 If you are already in a directory containing a `Cargo.lock` file, you run just the command with no parameters:
 
-`cargo2ports.py`
+`cargo2ports`
 
 If you would like to change the number of spaces each stanza line is indented by, use `-i`:
 
-`cargo2ports.py -i 2 ./Cargo.lock`
+`cargo2ports -i 2 ./Cargo.lock`
 
 You can also change the width of the field containing the name and version usin `-w`:
 
-`cargo2ports.py -w 25 ./Cargo.lock`
+`cargo2ports -w 25 ./Cargo.lock`
