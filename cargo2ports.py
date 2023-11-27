@@ -236,3 +236,6 @@ def main():
 
     output = generate_crates_stanza(packages)
     print(output)
+
+if __name__ == '__main__':
+    main()
