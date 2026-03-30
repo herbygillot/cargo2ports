@@ -91,7 +91,7 @@ def get_packages_from_metadata(text):
     metadata_lines = match.groups()[0].split("\n")
 
     for line in metadata_lines:
-        tokens = re.split("\s+", line)
+        tokens = re.split(r"\s+", line)
         if len(tokens) >= 6:
             package = dict()
 
@@ -176,7 +176,7 @@ def is_v1_lockfile(text):
     Return True if the given file contents are a V1 Cargo.lock file, False
     otherwise.
     """
-    return True if re.search("^\[metadata\]", text, re.MULTILINE) else False
+    return True if re.search(r"^\[metadata\]", text, re.MULTILINE) else False
 
 
 def main():
